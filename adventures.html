@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Our Adventures 🗺️</title>
+  <link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #1a1a2e;
+      color: white;
+    }
+
+    header {
+      text-align: center;
+      padding: 3rem 2rem 1.5rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    header h1 {
+      font-family: 'Pacifico', cursive;
+      font-size: clamp(2rem, 6vw, 3.5rem);
+      margin-bottom: 0.5rem;
+    }
+
+    header p {
+      opacity: 0.9;
+      font-size: 1.1rem;
+    }
+
+    #map {
+      width: 100%;
+      height: 50vh;
+      min-height: 350px;
+    }
+
+    .timeline {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 4rem 2rem;
+    }
+
+    .timeline h2 {
+      font-family: 'Pacifico', cursive;
+      font-size: 2rem;
+      text-align: center;
+      margin-bottom: 3rem;
+      color: #f093fb;
+    }
+
+    .timeline-item {
+      position: relative;
+      padding-left: 3rem;
+      margin-bottom: 3rem;
+      opacity: 0;
+      transform: translateX(-20px);
+      transition: all 0.6s ease;
+    }
+
+    .timeline-item.visible {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: 8px;
+      top: 0;
+      bottom: -3rem;
+      width: 2px;
+      background: linear-gradient(180deg, #f093fb, #667eea);
+    }
+
+    .timeline-item:last-child::before {
+      bottom: 0;
+    }
+
+    .timeline-item::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 6px;
+      width: 18px;
+      height: 18px;
+      background: #f093fb;
+      border-radius: 50%;
+      box-shadow: 0 0 15px rgba(240, 147, 251, 0.6);
+      animation: glow 2s infinite alternate;
+    }
+
+    @keyframes glow {
+      from { box-shadow: 0 0 10px rgba(240, 147, 251, 0.4); }
+      to { box-shadow: 0 0 25px rgba(240, 147, 251, 0.8); }
+    }
+
+    .timeline-date {
+      font-size: 0.85rem;
+      color: #f093fb;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 0.5rem;
+    }
+
+    .timeline-title {
+      font-size: 1.3rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .timeline-desc {
+      font-size: 0.95rem;
+      line-height: 1.7;
+      opacity: 0.8;
+    }
+
+    .timeline-places {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.8rem;
+    }
+
+    .place-tag {
+      background: rgba(240, 147, 251, 0.15);
+      border: 1px solid rgba(240, 147, 251, 0.3);
+      border-radius: 20px;
+      padding: 0.3rem 0.8rem;
+      font-size: 0.8rem;
+      color: #f093fb;
+    }
+
+    /* Long Distance Section */
+    .long-distance {
+      text-align: center;
+      padding: 4rem 2rem;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .long-distance h2 {
+      font-family: 'Pacifico', cursive;
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      color: #ffd86f;
+    }
+
+    .long-distance .subtitle {
+      font-size: 1.1rem;
+      opacity: 0.8;
+      margin-bottom: 3rem;
+    }
+
+    .distance-visual {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 2rem;
+    }
+
+    .city-bubble {
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 1.5rem 2rem;
+      text-align: center;
+      min-width: 150px;
+    }
+
+    .city-bubble .emoji { font-size: 2.5rem; margin-bottom: 0.5rem; }
+    .city-bubble .city { font-weight: 600; font-size: 1.1rem; }
+    .city-bubble .time { font-size: 0.8rem; opacity: 0.7; margin-top: 0.3rem; }
+
+    .distance-line {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .distance-line .km {
+      font-size: 0.85rem;
+      color: #ffd86f;
+      font-weight: 600;
+    }
+
+    .distance-line .dashes {
+      font-size: 1.5rem;
+      letter-spacing: 3px;
+      opacity: 0.5;
+      animation: flyPlane 3s infinite;
+    }
+
+    @keyframes flyPlane {
+      0%, 100% { transform: translateX(0); }
+      50% { transform: translateX(10px); }
+    }
+
+    .funny-facts {
+      max-width: 500px;
+      margin: 2rem auto 0;
+      text-align: left;
+    }
+
+    .funny-fact {
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 1rem 1.2rem;
+      margin-bottom: 1rem;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      border-left: 3px solid #ffd86f;
+    }
+
+    .funny-fact .emoji-lead { margin-right: 0.5rem; }
+
+    /* Back button */
+    .back-btn {
+      display: inline-block;
+      margin-top: 3rem;
+      padding: 0.8rem 2rem;
+      background: linear-gradient(135deg, #f093fb, #f5576c);
+      color: white;
+      text-decoration: none;
+      border-radius: 30px;
+      font-weight: 600;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+    .back-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 10px 30px rgba(240, 147, 251, 0.4);
+    }
+
+    footer {
+      text-align: center;
+      padding: 2rem;
+      background: #1a1a2e;
+      color: rgba(255,255,255,0.5);
+      font-size: 0.85rem;
+    }
+
+    /* Leaflet custom markers */
+    .custom-pin {
+      width: 20px;
+      height: 20px;
+      background: #f093fb;
+      border-radius: 50%;
+      border: 3px solid white;
+      box-shadow: 0 0 20px rgba(240, 147, 251, 0.8);
+      animation: glow 2s infinite alternate;
+    }
+
+    .leaflet-popup-content-wrapper {
+      border-radius: 12px;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    .leaflet-popup-content {
+      margin: 0;
+      padding: 0;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      min-width: 220px;
+    }
+
+    .popup-img {
+      width: 100%;
+      height: 140px;
+      object-fit: cover;
+      border-radius: 12px 12px 0 0;
+    }
+
+    .popup-body {
+      padding: 10px 14px 12px;
+    }
+
+    .popup-title {
+      font-weight: 600;
+      color: #764ba2;
+      margin-bottom: 4px;
+    }
+
+    .popup-date {
+      font-size: 0.8rem;
+      color: #999;
+    }
+
+    @media (max-width: 600px) {
+      .distance-visual { flex-direction: column; }
+      .distance-line .dashes { transform: rotate(90deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Lock Screen -->
+  <div id="lock-screen" style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#667eea,#764ba2);color:white;text-align:center;flex-direction:column;padding:2rem;">
+    <h1 style="font-family:'Pacifico',cursive;font-size:2.5rem;margin-bottom:1rem;">Not yet! 🙈</h1>
+    <p style="font-size:1.1rem;opacity:0.9;">This page unlocks on her birthday. Go back and wait!</p>
+    <a href="index.html" style="margin-top:2rem;padding:0.8rem 2rem;background:rgba(255,255,255,0.2);color:white;text-decoration:none;border-radius:30px;font-weight:600;">← Back to Countdown</a>
+  </div>
+
+  <header>
+    <h1>Our Adventures Map 🗺️</h1>
+    <p>Every pin is a memory with you</p>
+  </header>
+
+  <div id="map"></div>
+
+  <section class="timeline">
+    <h2>The Story So Far ✨</h2>
+
+    <div class="timeline-item">
+      <div class="timeline-date">March 14, 2026 • 5:05 PM</div>
+      <div class="timeline-title">Where It All Began 🌳</div>
+      <div class="timeline-desc">
+        Met for the first time under a mango tree at Shellar Hill, Kamshet.
+        Started talking on Instagram that same night. From strangers to something
+        more — all under the shade of one tree.
+      </div>
+      <div class="timeline-places">
+        <span class="place-tag">📍 Shellar Hill, Kamshet</span>
+        <span class="place-tag">🥭 Under a mango tree</span>
+      </div>
+    </div>
+
+    <div class="timeline-item">
+      <div class="timeline-date">March 27, 2026</div>
+      <div class="timeline-title">First Date 💫</div>
+      <div class="timeline-desc">
+        First proper date in Pune! Lunch at Paashh, then coffee at Cafe Peter
+        in Kalyani Nagar. The first of many food adventures together.
+      </div>
+      <div class="timeline-places">
+        <span class="place-tag">🍽️ Paashh, Pune</span>
+        <span class="place-tag">☕ Cafe Peter, Kalyani Nagar</span>
+      </div>
+    </div>
+
+    <div class="timeline-item">
+      <div class="timeline-date">April 10, 2026</div>
+      <div class="timeline-title">Your World 🏠</div>
+      <div class="timeline-desc">
+        Visited her home in Vimaan Nagar for the first time. Food court at Phoenix Mall,
+        then Kalyani Veg in Kalyani Nagar. A whole day in her city before heading
+        back to Mumbai.
+      </div>
+      <div class="timeline-places">
+        <span class="place-tag">🏡 Eden Garden, Vimaan Nagar</span>
+        <span class="place-tag">🛍️ Phoenix Mall</span>
+        <span class="place-tag">🥗 Kalyani Veg, Kalyani Nagar</span>
+      </div>
+    </div>
+
+    <div class="timeline-item">
+      <div class="timeline-date">April 24, 2026</div>
+      <div class="timeline-title">Mumbai Adventures 🚶</div>
+      <div class="timeline-desc">
+        Met near Dadar TT station. Lunch at Grandmama's Cafe, walked to Siddhivinayak
+        Temple for blessings, then strolled through Sane Guruji Garden. The kind of
+        day you never want to end.
+      </div>
+      <div class="timeline-places">
+        <span class="place-tag">🍝 Grandmama's Cafe, Dadar</span>
+        <span class="place-tag">🙏 Siddhivinayak Temple</span>
+        <span class="place-tag">🌿 Sane Guruji Garden</span>
+      </div>
+    </div>
+
+    <div class="timeline-item">
+      <div class="timeline-date">May 1, 2026</div>
+      <div class="timeline-title">See You Soon 🛫</div>
+      <div class="timeline-desc">
+        She came to Mumbai airport to see me off before my flight to the US.
+        The hardest goodbye — but not the last one.
+      </div>
+      <div class="timeline-places">
+        <span class="place-tag">✈️ BOM Airport, Mumbai</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Long Distance Section -->
+  <section class="long-distance">
+    <h2>Currently: Long Distance Mode 📡</h2>
+    <p class="subtitle">13,600 km apart but still annoyingly on call 24/7</p>
+
+    <div class="distance-visual">
+      <div class="city-bubble">
+        <div class="emoji">🌉</div>
+        <div class="city">San Francisco</div>
+        <div class="time" id="sf-time">Loading...</div>
+      </div>
+      <div class="distance-line">
+        <span class="km">13,600 km</span>
+        <span class="dashes">✈️ · · · · · · ·</span>
+        <span class="km">~16 hours flight</span>
+      </div>
+      <div class="city-bubble">
+        <div class="emoji">🏙️</div>
+        <div class="city">Pune</div>
+        <div class="time" id="pune-time">Loading...</div>
+      </div>
+    </div>
+
+    <div class="funny-facts">
+      <div class="funny-fact">
+        <span class="emoji-lead">🕐</span>
+        <strong>Time zone difference:</strong> 12.5 hours. When one of us says "good morning,"
+        the other says "good night." Romance!
+      </div>
+      <div class="funny-fact">
+        <span class="emoji-lead">📱</span>
+        <strong>Video call schedule:</strong> "Just 5 more minutes" has never meant 5 minutes.
+        Not once.
+      </div>
+      <div class="funny-fact">
+        <span class="emoji-lead">😴</span>
+        <strong>Sleep sacrifice level:</strong> One of us is always fighting sleep on a call.
+        It's a competition nobody wins.
+      </div>
+      <div class="funny-fact">
+        <span class="emoji-lead">🍕</span>
+        <strong>Virtual dates:</strong> "Let's eat together on call" — proceeds to watch each
+        other eat in different time zones like totally normal people.
+      </div>
+      <div class="funny-fact">
+        <span class="emoji-lead">🌅</span>
+        <strong>The upside:</strong> Same sun, same moon, same people — just different Wi-Fi passwords.
+      </div>
+    </div>
+
+    <a href="index.html" class="back-btn">← Back to Birthday Card</a>
+  </section>
+
+  <footer>
+    <p>From a mango tree in Kamshet to 13,600 km apart — and counting every moment until the next pin on this map 📍</p>
+  </footer>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // Lock check — June 11, 2026 00:00 IST
+    const targetDate = new Date('2026-06-11T00:00:00+05:30').getTime();
+    const lockScreen = document.getElementById('lock-screen');
+    if (Date.now() >= targetDate) {
+      lockScreen.style.display = 'none';
+    }
+
+    // Console bypass for preview
+    window.unlock = () => { lockScreen.style.display = 'none'; };
+
+    // Map setup centered on India
+    const map = L.map('map', {
+      scrollWheelZoom: false
+    }).setView([19.0, 74.0], 7);
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '© OpenStreetMap contributors © CARTO'
+    }).addTo(map);
+
+    // Custom glowing pin icon
+    const pinIcon = L.divIcon({
+      className: 'custom-pin',
+      iconSize: [20, 20],
+      iconAnchor: [10, 10],
+      popupAnchor: [0, -15]
+    });
+
+    // Adventure locations
+    const adventures = [
+      {
+        lat: 18.7676, lng: 73.3871,
+        title: "Where It All Began 🌳",
+        desc: "Shellar Hill, Kamshet — under a mango tree",
+        date: "March 14, 2026",
+        img: "images/kamshet.jpg"
+      },
+      {
+        lat: 18.5362, lng: 73.8940,
+        title: "First Date 💫",
+        desc: "Paashh Restaurant, Pune",
+        date: "March 27, 2026",
+        img: "images/paashh.jpg"
+      },
+      {
+        lat: 18.5535, lng: 73.9150,
+        title: "Cafe Peter ☕",
+        desc: "Kalyani Nagar, Pune",
+        date: "March 27, 2026",
+        img: "images/cafe-peter.jpg"
+      },
+      {
+        lat: 18.5679, lng: 73.9143,
+        title: "Her Home 🏡",
+        desc: "Eden Garden, Vimaan Nagar, Pune",
+        date: "April 10, 2026",
+        img: "images/eden-garden.jpg"
+      },
+      {
+        lat: 18.5625, lng: 73.9190,
+        title: "Phoenix Mall 🛍️",
+        desc: "Food Court hangout, Vimaan Nagar",
+        date: "April 10, 2026",
+        img: "images/phoenix-mall.jpg"
+      },
+      {
+        lat: 18.5535, lng: 73.9100,
+        title: "Kalyani Veg 🥗",
+        desc: "Kalyani Nagar, Pune",
+        date: "April 10, 2026",
+        img: "images/kalyani-veg.jpg"
+      },
+      {
+        lat: 19.0178, lng: 72.8478,
+        title: "Dadar Meet 🚉",
+        desc: "Near Dadar TT Station, Mumbai",
+        date: "April 24, 2026",
+        img: "images/dadar.jpg"
+      },
+      {
+        lat: 19.0166, lng: 72.8476,
+        title: "Grandmama's Cafe 🍝",
+        desc: "Lunch date in Dadar",
+        date: "April 24, 2026",
+        img: "images/grandmamas.jpg"
+      },
+      {
+        lat: 19.0169, lng: 72.8310,
+        title: "Siddhivinayak Temple 🙏",
+        desc: "Blessings together",
+        date: "April 24, 2026",
+        img: "images/siddhivinayak.jpg"
+      },
+      {
+        lat: 19.0155, lng: 72.8320,
+        title: "Sane Guruji Garden 🌿",
+        desc: "Evening walk near the temple",
+        date: "April 24, 2026",
+        img: "images/sane-guruji.jpg"
+      },
+      {
+        lat: 19.0896, lng: 72.8656,
+        title: "The Goodbye (for now) ✈️",
+        desc: "BOM Airport — she came to see me off",
+        date: "May 1, 2026",
+        img: "images/airport.jpg"
+      },
+      {
+        lat: 37.7749, lng: -122.4194,
+        title: "Missing You From Here 🌉",
+        desc: "San Francisco — the long-distance chapter",
+        date: "May 2026 – present",
+        img: "images/sf.jpg"
+      }
+    ];
+
+    adventures.forEach(a => {
+      const fallback = `https://placehold.co/300x140/764ba2/white?text=${encodeURIComponent(a.title.replace(/\s*[\u{1F000}-\u{1FFFF}]\s*/gu, ''))}`;
+      L.marker([a.lat, a.lng], { icon: pinIcon })
+        .addTo(map)
+        .bindPopup(`<img class="popup-img" src="${a.img}" onerror="this.src='${fallback}'" alt="${a.title}"><div class="popup-body"><div class="popup-title">${a.title}</div><div>${a.desc}</div><div class="popup-date">${a.date}</div></div>`, { maxWidth: 250, minWidth: 220 });
+    });
+
+    // Fit map to show all India pins
+    const indiaAdventures = adventures.filter(a => a.lng > 0);
+    const bounds = L.latLngBounds(indiaAdventures.map(a => [a.lat, a.lng]));
+    map.fitBounds(bounds.pad(0.3));
+
+    // Live clocks
+    function updateClocks() {
+      const now = new Date();
+      const sfTime = now.toLocaleTimeString('en-US', { timeZone: 'America/Los_Angeles', hour: '2-digit', minute: '2-digit' });
+      const puneTime = now.toLocaleTimeString('en-US', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' });
+      document.getElementById('sf-time').textContent = sfTime;
+      document.getElementById('pune-time').textContent = puneTime;
+    }
+    updateClocks();
+    setInterval(updateClocks, 60000);
+
+    // Timeline scroll animation
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) entry.target.classList.add('visible');
+      });
+    }, { threshold: 0.2 });
+
+    document.querySelectorAll('.timeline-item').forEach(item => observer.observe(item));
+  </script>
+</body>
+</html>
